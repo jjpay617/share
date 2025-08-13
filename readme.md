@@ -142,3 +142,49 @@
   }
   
   ```
+
+## 回调通知
+
+- 商户需进入`商户系统后台->安全中心->设置回调地址`配置回调通知地址
+- 平台将订单状态回调给商户系统，商户收到回调后，需返回大写`SUCCESS`以表示确认收到回调
+- 重试机制：如果平台未收到 SUCCESS 响应标识，会每隔1分钟重新回调，若连续 10 次 回调失败，将不会再尝试自动回调
+
+### POST `商户设置的回调地址`
+
+| 参数                            | 类型     | 必填 | 描述                 |
+|-------------------------------|--------|----|--------------------|
+| type | string | Y  | 通知类型，值参考下方         |
+| business | string | Y  | 业务类型，`3` 交易，`4` 代付 |
+| ad_id | int    | Y  | 代付ID               |
+| dispute_result_action | int    | N  | 申诉处理结果，值参考下方       |
+| orderno | string | Y  | 订单号                |
+| out_orderno | string | Y  | 商户订单号              |
+
+> type 通知类型
+
+| type | 描述       |
+|------|----------|
+| ORDER_CALLBACK_PENDING    | 订单进行中    |
+| ORDER_CALLBACK_CANCEL    | 订单取消     |
+| ORDER_CALLBACK_COMPLETED    | 订单完成     |
+| ORDER_CALLBACK_PAID    | 订单已支付    |
+| ORDER_CALLBACK_DISPUTE_RESULT    | 订单申诉处理结果 |
+| ORDER_CALLBACK_RELEASING    | 释放代币     |
+
+> dispute_result_action 申诉处理结果
+
+| dispute_result_action         | 描述       |
+|-------------------------------|----------|
+| 1                             | 驳回申诉    |
+| 2                             | 取消订单     |
+| 3                             | 完成订单    |
+
+### 商户应答
+
+- **Success**: HTTP 200 OK
+
+  ```text
+  
+    SUCCESS
+  
+  ```

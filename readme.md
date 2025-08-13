@@ -9,7 +9,7 @@
 
 | 名称  | 地址                          |
 |-----|-----------------------------|
-| 生产环境（prod） | https://payful.api.x.jj.com |
+| 生产环境（prod） | https://psbajzjk.fyvfjo.com |
 
 #### HTTP 状态码
 

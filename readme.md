@@ -56,7 +56,7 @@
 | Content-Type  | string | Y       | 固定值: `application/json` |
 | X-Merchant-ID | int    | Y       | 商户ID                   |
 | X-Timestamp   | int    | Y       | 当前时间戳单位为秒，误差不能超过5分钟 |
-| X-Signature   | string | Y       | 签名算法，规则参考下方     |
+| X-Signature   | string | Y       | 签名，算法规则参考下方     |
 
 > **`X-Signature` 签名算法**  
 > 采用 **HMAC-SHA256** 算法，使用分配的商户密钥进行签名（商户秘钥及 merchantID 在商户后台获取）
@@ -79,6 +79,18 @@
 > - POST 请求体必须是 JSON 格式（无需格式化）
 > - 时间戳误差不能超过 5 分钟
 > - 签名结果大小写敏感
+
+## 订单状态码
+
+| code | 描述    |
+|------|-------|
+| 1    | 待支付    |
+| 2    | 已支付   |
+| 3    | 已完成  |
+| 4    | 已失败 |
+| 5    | 已取消 |
+| 6    | 申诉中 |
+| 7    | 待释放 |
 
 ## 发起代付
 
@@ -116,8 +128,17 @@
   
     {
       "code": 200,
-      "data": {},
+      "data": {
+          "ad": {
+              "id": 1000000
+          },
+          "order": {
+              "orderno": "BE7361265191402606592",
+              "status": 1,
+              "out_orderno": "TEST7361265191402606592"
+          }
+      },
       "msg": "success"
-    }
+  }
   
   ```

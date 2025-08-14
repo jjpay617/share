@@ -150,6 +150,45 @@
   
   ```
 
+## 订单查询
+
+### GET `/v1/exchange/order/detail`
+
+| 参数                            | 类型     | 必填 | 描述              |
+|-------------------------------|--------|----|-----------------|
+| orderno | string    | N  | 系统单号，与 商户单号 二选一 |
+| out_orderno | string    | N  | 商户单号，与 系统单号 二选一            |
+
+### 响应
+
+- **Success**: HTTP 200 OK
+
+  ```json5
+  
+    {
+      "code": 200,
+      "data": {
+        "orderno": "TE7360981108480508018",
+        "out_orderno": null,
+        "business": 3,
+        "cancel_reason": "",
+        "status": 3,
+        "settlement": {
+          "m_fee": "53.55",
+          "m_rate": "7.1",
+          "m_amount_fee": "53.55",
+          "m_service_fee": "0"
+        },
+        "expire_at": "2025-08-12T16:35:31+08:00",
+        "release_at": null,
+        "completed_at": "2025-08-12T16:30:37+08:00",
+        "paid_at": null
+      },
+      "msg": "success"
+    }
+  
+  ```
+
 ## 回调通知
 
 - 商户需进入 **商户系统后台 → 安全中心 → 设置回调地址** 配置回调通知 URL。

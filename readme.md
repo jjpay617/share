@@ -215,7 +215,7 @@
 | orderno | string | Y  | 订单号                |
 | out_orderno | string | Y  | 商户订单号              |
 | attach_params | string    | Y  | 透传值，回调时原样返回       |
-| dispute_result_action | int    | Y  | 申诉处理结果，值参考下方       |
+| dispute_result_action | int    | N  | 申诉处理结果，值参考下方       |
 
 > type 通知类型
 

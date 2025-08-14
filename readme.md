@@ -92,6 +92,64 @@
 | 6    | 申诉中 |
 | 7    | 待释放 |
 
+## 发起交易
+
+### POST `/v1/exchange/ad/order/match`
+
+| 参数                            | 类型     | 必填 | 描述               |
+|-------------------------------|--------|----|------------------|
+| symbolid | int    | Y  | 代币符号ID，固定值：`104` |
+| finance_no | string | Y  | 通道标识             |
+| finance | object | Y  | 付款信息，数据结构参考下方    |
+| method | string | Y  | 撮合方式，固定值：`api`   |
+| out_orderno | string | Y  | 商户订单号            |
+| amount | string | Y  | 金额(元)            |
+| attach_params | string | N  | 透传值，回调时原样返回      |
+
+> finance
+
+| 参数                            | 类型     | 必填 | 描述    |
+|-------------------------------|--------|----|-------|
+| html_field | object    | Y  | 通道参数，数据结构参考下方 |
+
+> finance.html_field 支付宝
+
+| 参数       | 类型       | 必填 | 描述             |
+|----------|----------|----|----------------|
+| userName     | string      | N  | 付款人姓名          |
+
+
+### 响应
+
+- **Success**: HTTP 200 OK
+
+  ```json5
+  
+    {
+      "code": 200,
+      "data": {
+          "orderno": "TE7361686412485201920",
+          "out_orderno": null,
+          "business": 3,
+          "cancel_reason": "",
+          "status": 1,
+          "settlement": {
+              "m_fee": "324",
+              "m_rate": "8",
+              "m_amount_fee": "324",
+              "m_service_fee": "0"
+          },
+          "expire_at": "2025-08-14T17:23:35.583+08:00",
+          "release_at": null,
+          "completed_at": null,
+          "paid_at": null,
+          "created_at": "2025-08-14T17:13:34.261+08:00"
+      },
+      "msg": "success"
+  }
+  
+  ```
+
 ## 发起代付
 
 ### POST `/v1/exchange/ad/merchant/sell/up`
@@ -102,7 +160,7 @@
 | finance | object | Y  | 收款信息，数据结构参考下方 |
 | method | string | Y  | 撮合方式，固定值：`api`         |
 | out_orderno | string | Y  | 商户订单号                  |
-| amount | string | Y  | 金额                     |
+| amount | string | Y  | 金额(元)                     |
 | attach_params | string | N  | 透传值，回调时原样返回                     |
 
 > finance

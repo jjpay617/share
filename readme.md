@@ -130,10 +130,6 @@
           "cancel_reason": "",
           "status": 1,
           "settlement": {
-              "m_fee": "324",
-              "m_rate": "8",
-              "m_amount_fee": "324",
-              "m_service_fee": "0"
           },
           "expire_at": "2025-08-14T17:23:35.583+08:00",
           "release_at": null,
@@ -233,6 +229,9 @@
           "m_rate": "7.1",
           "m_amount_fee": "53.55",
           "m_service_fee": "0"
+        },
+        "body": {
+          "pay_url": "http://",
         },
         "expire_at": "2025-08-12T16:35:31+08:00",
         "release_at": null,

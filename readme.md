@@ -260,14 +260,14 @@
 
 ### POST `商户设置的回调地址`
 
-| 参数                            | 类型     | 必填 | 描述                 |
-|-------------------------------|--------|----|--------------------|
-| type | string | Y  | 通知类型，值参考下方         |
-| business | string | Y  | 业务类型，`3` 交易，`4` 代付 |
-| ad_id | int    | Y  | 代付ID               |
-| orderno | string | Y  | 订单号                |
-| out_orderno | string | Y  | 商户订单号              |
-| attach_params | string    | Y  | 透传值，回调时原样返回       |
+| 参数                    | 类型     | 必填 | 描述                 |
+|-----------------------|--------|----|--------------------|
+| type                  | string | Y  | 通知类型，值参考下方         |
+| business              | string | Y  | 业务类型，`3` 交易，`4` 代付 |
+| adno                  | string    | Y  | 代付单号               |
+| orderno               | string | Y  | 订单号                |
+| out_orderno           | string | Y  | 商户订单号              |
+| attach_params         | string    | Y  | 透传值，回调时原样返回        |
 | dispute_result_action | int    | N  | 申诉处理结果，值参考下方       |
 
 > type 通知类型

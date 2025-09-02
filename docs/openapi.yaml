@@ -1,60 +1,8 @@
 openapi: 3.0.0
 info:
-  title: JJPay API
+  title: 商户开发者文档
   version: 1.0.0
-  description: >
-    # 约定声明
-    
-    ## 网关地址
-    联系客服索取
-    
-    ## 响应数据结构
-    
-    ### 成功响应
-    ```json
-    {
-      "code": 200,
-      "data": "datas...",
-      "msg": "success"
-    }
-    ```
-    
-    ### 失败响应
-    ```json
-    {
-      "code": 401015,
-      "data": "",
-      "msg": "参数传递无效"
-    }
-    ```
-    
-    ## HTTP 状态码
-    
-    | code | 描述    |
-    |------|-------|
-    | 200  | 正常    |
-    | 401  | 未授权   |
-    | 403  | 权限不足  |
-    | 404  | 资源不存在 |
-    
-    ## 签名算法
-    采用 **HMAC-SHA256** 算法，使用分配的商户密钥进行签名（商户秘钥及 merchantID 在商户后台获取）
-    
-    **GET 请求签名构造**
-    ```
-    待签名字符串 = merchantID + timestamp + query_params
-    ```
-    
-    **POST 请求签名构造**
-    ```
-    待签名字符串 = merchantID + timestamp + query_params + request_body
-    ```
-    
-    **提示**
-    - query_params 参数按 key 升序排序，其值进行 URL 编码
-    - POST 请求体必须是 JSON 格式（无需格式化）
-    - 时间戳误差不能超过 5 分钟
-    - 签名结果大小写敏感
+  description: ""
 
 servers:
   - url: https://api.example.com
@@ -62,53 +10,45 @@ servers:
 
 components:
   securitySchemes:
-    merchantAuthentication:
+    merchantID:
       type: apiKey
       in: header
       name: X-Merchant-ID
       description: 商户ID，在商户后台获取
-    timestampValidation:
+    timestamp:
       type: apiKey
       in: header
       name: X-Timestamp
       description: 当前时间戳单位为秒，误差不能超过5分钟
-    signatureVerification:
+    signature:
       type: apiKey
       in: header
       name: X-Signature
-      description: 签名，采用HMAC-SHA256算法，使用商户密钥对请求进行签名
+      description: |
+        签名，采用HMAC-SHA256算法，使用商户密钥对请求进行签名
+        > **`X-Signature` 签名算法**  
+        > 采用 **HMAC-SHA256** 算法，使用分配的商户密钥进行签名（商户秘钥及 merchantID 在商户后台获取）
+        >
+        > **GET 请求签名构造**
+        > ```
+        > 待签名字符串 = merchantID + timestamp + query_params
+        > 请求示例: https://api.example.com/v1/query?param1=value1&param2=value2
+        > ```
+        >
+        > **POST 请求签名构造**
+        > ```
+        > 待签名字符串 = merchantID + timestamp + query_params + request_body
+        > 请求示例: https://api.example.com/v1/create?param1=value1
+        > 请求体: {"name": "test","value": "123"}
+        > ```
+        >
+        > **提示**
+        > - query_params 参数按 key 升序排序，其值进行 URL 编码
+        > - POST 请求体必须是 JSON 格式（无需格式化）
+        > - 时间戳误差不能超过 5 分钟
+        > - 签名结果大小写敏感
   
   schemas:
-    CommonResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          description: 响应状态码
-          example: 200
-        data:
-          description: 响应数据
-        msg:
-          type: string
-          description: 响应消息
-          example: "success"
-    
-    ErrorResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-          description: 错误状态码
-          example: 401015
-        data:
-          type: string
-          description: 错误数据
-          example: ""
-        msg:
-          type: string
-          description: 错误消息
-          example: "参数传递无效"
-    
     OrderStatus:
       type: integer
       description: >
@@ -134,10 +74,7 @@ components:
 
     DisputeResultAction:
       type: integer
-      enum:
-        - 1
-        - 2
-        - 3
+      enum: [1, 2, 3]
       description: >
         申诉处理结果
           * `1` - 驳回申诉
@@ -145,42 +82,105 @@ components:
           * `3` - 完成订单
 
   responses:
-    SuccessResponse:
-      description: 成功响应
+    Success:
+      description: 成功响应（业务状态码在 code 字段中）
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/CommonResponse'
-    
-    ErrorResponse:
-      description: 错误响应
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    
-    CallbackSuccessResponse:
-      description: 回调成功响应
-      content:
-        text/plain:
-          schema:
-            type: string
-            example: "SUCCESS"
-    
-    # 统一的错误响应，包含所有可能的HTTP状态码
-    AllErrorResponses:
-      description: 错误响应
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            oneOf:
+              - type: object
+                description: 成功
+                properties:
+                  code:
+                    type: integer
+                    enum: [200]
+                    description: 业务成功
+                  data:
+                    type: object
+                  msg:
+                    type: string
+                required:
+                  - code
+                  - data
+                  - msg
+              - type: object
+                description: 业务异常
+                properties:
+                  code:
+                    type: integer
+                  data:
+                    type: string
+                  msg:
+                    type: string
+                required:
+                  - code
+                  - data
+                  - msg
 
-# 全局安全配置 - 所有API端点都需要这三个认证头部
-# 注意：回调接口(/merchant/callback)不需要认证，因为它是平台向商户发送通知
+    Unauthorized:
+      description: 未授权
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 401
+              msg:
+                type: string
+                example: "未授权"
+              data:
+                type: string
+                example: ""
+            required:
+              - code
+              - msg
+
+    Forbidden:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 403
+              msg:
+                type: string
+                example: "权限不足"
+              data:
+                type: string
+                example: ""
+            required:
+              - code
+              - msg
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 404
+              msg:
+                type: string
+                example: "资源不存在"
+              data:
+                type: string
+                example: ""
+            required:
+              - code
+              - msg
+
 security:
-  - merchantAuthentication: []
-    timestampValidation: []
-    signatureVerification: []
+  - merchantID: []
+    timestamp: []
+    signature: []
 
 paths:
   /v1/exchange/ad/order/match:
@@ -198,7 +198,7 @@ paths:
                   description: 代币符号ID，固定值：102
                 finance_no:
                   type: string
-                  description: 通道标识
+                  description: 通道标识，商户后台获取
                 finance:
                   type: object
                   description: 付款信息
@@ -231,66 +231,65 @@ paths:
                 - amount
       responses:
         '200':
-          description: 成功
+          description: Success
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/CommonResponse'
-                  - type: object
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    enum: [200]
+                  msg:
+                    type: string
+                  data:
+                    type: object
                     properties:
-                      data:
+                      orderno:
+                        type: string
+                        description: 系统订单号
+                      out_orderno:
+                        type: string
+                        nullable: true
+                        description: 商户订单号
+                      business:
+                        type: integer
+                        description: 业务类型
+                      cancel_reason:
+                        type: string
+                        description: 取消原因
+                      status:
+                        $ref: '#/components/schemas/OrderStatus'
+                      settlement:
                         type: object
-                        properties:
-                          orderno:
-                            type: string
-                            description: 系统订单号
-                          out_orderno:
-                            type: string
-                            nullable: true
-                            description: 商户订单号
-                          business:
-                            type: integer
-                            description: 业务类型
-                          cancel_reason:
-                            type: string
-                            description: 取消原因
-                          status:
-                            $ref: '#/components/schemas/OrderStatus'
-                          settlement:
-                            type: object
-                            description: 结算信息
-                          expire_at:
-                            type: string
-                            format: date-time
-                            description: 过期时间
-                          release_at:
-                            type: string
-                            format: date-time
-                            nullable: true
-                            description: 释放时间
-                          completed_at:
-                            type: string
-                            format: date-time
-                            nullable: true
-                            description: 完成时间
-                          paid_at:
-                            type: string
-                            format: date-time
-                            nullable: true
-                            description: 支付时间
-                          created_at:
-                            type: string
-                            format: date-time
-                            description: 创建时间
-        '400':
-          $ref: '#/components/responses/AllErrorResponses'
-        '401':
-          $ref: '#/components/responses/AllErrorResponses'
-        '403':
-          $ref: '#/components/responses/AllErrorResponses'
-        '404':
-          $ref: '#/components/responses/AllErrorResponses'
+                        description: 结算信息
+                      expire_at:
+                        type: string
+                        format: date-time
+                        description: 过期时间
+                      release_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 释放时间
+                      completed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 完成时间
+                      paid_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 支付时间
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: 创建时间
+                required:
+                  - code
+                  - data
+                  - msg
   /v1/exchange/ad/merchant/sell/up:
     post:
       summary: 发起代付
@@ -316,7 +315,7 @@ paths:
                       description: 通道参数
                       oneOf:
                         - type: object
-                          description: 支付宝支付字段
+                          title: 支付宝
                           properties:
                             bank_no:
                               type: string
@@ -333,7 +332,7 @@ paths:
                             - bank_name
                             - receiver
                         - type: object
-                          description: 银行卡支付字段
+                          title: 银行卡
                           properties:
                             bank_no:
                               type: string
@@ -369,42 +368,41 @@ paths:
                 - amount
       responses:
         '200':
-          description: 成功
+          description: Success
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/CommonResponse'
-                  - type: object
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    enum: [200]
+                  msg:
+                    type: string
+                  data:
+                    type: object
                     properties:
-                      data:
+                      ad:
                         type: object
                         properties:
-                          ad:
-                            type: object
-                            properties:
-                              id:
-                                type: integer
-                                description: 代付单ID
-                          order:
-                            type: object
-                            properties:
-                              orderno:
-                                type: string
-                                description: 系统订单号
-                              status:
-                                $ref: '#/components/schemas/OrderStatus'
-                              out_orderno:
-                                type: string
-                                description: 商户订单号
-        '400':
-          $ref: '#/components/responses/AllErrorResponses'
-        '401':
-          $ref: '#/components/responses/AllErrorResponses'
-        '403':
-          $ref: '#/components/responses/AllErrorResponses'
-        '404':
-          $ref: '#/components/responses/AllErrorResponses'
+                          id:
+                            type: integer
+                            description: 代付单ID
+                      order:
+                        type: object
+                        properties:
+                          orderno:
+                            type: string
+                            description: 系统订单号
+                          status:
+                            $ref: '#/components/schemas/OrderStatus'
+                          out_orderno:
+                            type: string
+                            description: 商户订单号
+                required:
+                  - code
+                  - data
+                  - msg
   /v1/exchange/order/detail:
     get:
       summary: 订单查询
@@ -423,88 +421,98 @@ paths:
           description: 商户单号，与系统单号二选一
       responses:
         '200':
-          description: 成功
+          description: Success
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/CommonResponse'
-                  - type: object
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    enum: [200]
+                  msg:
+                    type: string
+                  data:
+                    type: object
                     properties:
-                      data:
+                      orderno:
+                        type: string
+                        description: 系统订单号
+                      out_orderno:
+                        type: string
+                        nullable: true
+                        description: 商户订单号
+                      business:
+                        type: integer
+                        description: 业务类型
+                      cancel_reason:
+                        type: string
+                        description: 取消原因
+                      status:
+                        $ref: '#/components/schemas/OrderStatus'
+                      settlement:
                         type: object
                         properties:
-                          orderno:
+                          m_fee:
                             type: string
-                            description: 系统订单号
-                          out_orderno:
+                            description: 手续费
+                          m_rate:
                             type: string
-                            nullable: true
-                            description: 商户订单号
-                          business:
-                            type: integer
-                            description: 业务类型
-                          cancel_reason:
+                            description: 费率
+                          m_amount_fee:
                             type: string
-                            description: 取消原因
-                          status:
-                            $ref: '#/components/schemas/OrderStatus'
-                          settlement:
-                            type: object
-                            properties:
-                              m_fee:
-                                type: string
-                                description: 手续费
-                              m_rate:
-                                type: string
-                                description: 费率
-                              m_amount_fee:
-                                type: string
-                                description: 金额手续费
-                              m_service_fee:
-                                type: string
-                                description: 服务费
-                          body:
-                            type: object
-                            properties:
-                              pay_url:
-                                type: string
-                                description: 支付链接
-                          expire_at:
+                            description: 金额手续费
+                          m_service_fee:
                             type: string
-                            format: date-time
-                            description: 过期时间
-                          release_at:
+                            description: 服务费
+                      body:
+                        type: object
+                        properties:
+                          pay_url:
                             type: string
-                            format: date-time
-                            nullable: true
-                            description: 释放时间
-                          completed_at:
-                            type: string
-                            format: date-time
-                            nullable: true
-                            description: 完成时间
-                          paid_at:
-                            type: string
-                            format: date-time
-                            nullable: true
-                            description: 支付时间
-        '400':
-          $ref: '#/components/responses/AllErrorResponses'
-        '401':
-          $ref: '#/components/responses/AllErrorResponses'
-        '403':
-          $ref: '#/components/responses/AllErrorResponses'
-        '404':
-          $ref: '#/components/responses/AllErrorResponses'
+                            description: 支付链接
+                      expire_at:
+                        type: string
+                        format: date-time
+                        description: 过期时间
+                      release_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 释放时间
+                      completed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 完成时间
+                      paid_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 支付时间
+                required:
+                  - code
+                  - data
+                  - msg
   /merchant/callback:   # 这里用示例路径，商户可自行替换
     post:
       summary: 回调通知
       # 回调接口不需要认证，因为它是平台向商户发送通知
       security: []  # 覆盖全局安全配置，设置为无认证
-      description: >
-        平台通过 HTTP POST 向商户回调订单状态。商户必须返回大写字符串 "SUCCESS" 确认收到。
-        平台会根据重试机制多次发送，直到收到 "SUCCESS" 或达到重试次数上限。
+      description: |
+        - 商户需进入 **商户系统后台 → 安全中心 → 设置回调地址** 配置回调通知 URL。
+        - 平台会将订单状态通过 HTTP POST 回调至商户系统。
+        - 商户收到回调后，必须返回大写字符串 `SUCCESS` 以表示确认（ACK）收到回调。
+
+        **重试机制**
+        
+        平台在向回调接口推送消息时，若出现以下任一情况，将视为回调失败：
+        1. 接口响应超时（默认 15 秒）
+        2. HTTP 状态码非 200
+        3. 响应内容未包含 `"SUCCESS"`（区分大小写）
+
+        回调失败的消息会进入重试队列，延迟时间会逐步递增：10 秒 → 30 秒 → 1 分钟 → 2 分钟 → 5 分钟 → … → 最长 2 小时，最多重试 **16 次**。  
+        若连续 16 次均失败，该消息将停止自动回调。
       requestBody:
         required: true
         content:
@@ -515,8 +523,12 @@ paths:
                 type:
                   $ref: '#/components/schemas/CallbackType'
                 business:
-                  type: string
-                  description: 业务类型，3 交易，4 代付
+                  type: integer
+                  enum: [3, 4]
+                  description: >
+                    业务类型
+                      - `3` - 交易
+                      - `4` -  代付
                 adno:
                   type: string
                   description: 代付单号
@@ -540,5 +552,10 @@ paths:
                 - attach_params
       responses:
         '200':
-          $ref: '#/components/responses/CallbackSuccessResponse'
+          description: 返回大写字符串 `SUCCESS` 以表示确认（ACK）收到回调
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["SUCCESS"]
 

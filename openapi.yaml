@@ -1,0 +1,541 @@
+openapi: 3.0.0
+info:
+  title: JJPay API
+  version: 1.0.0
+  description: |
+    # 约定声明
+    
+    ## 网关地址
+    联系客服索取
+    
+    ## 响应数据结构
+    
+    ### 成功响应
+    ```json
+    {
+      "code": 200,
+      "data": "datas...",
+      "msg": "success"
+    }
+    ```
+    
+    ### 失败响应
+    ```json
+    {
+      "code": 401015,
+      "data": "",
+      "msg": "参数传递无效"
+    }
+    ```
+    
+    ## HTTP 状态码
+    
+    | code | 描述    |
+    |------|-------|
+    | 200  | 正常    |
+    | 401  | 未授权   |
+    | 403  | 权限不足  |
+    | 404  | 资源不存在 |
+    
+    ## 签名算法
+    采用 **HMAC-SHA256** 算法，使用分配的商户密钥进行签名（商户秘钥及 merchantID 在商户后台获取）
+    
+    **GET 请求签名构造**
+    ```
+    待签名字符串 = merchantID + timestamp + query_params
+    ```
+    
+    **POST 请求签名构造**
+    ```
+    待签名字符串 = merchantID + timestamp + query_params + request_body
+    ```
+    
+    **提示**
+    - query_params 参数按 key 升序排序，其值进行 URL 编码
+    - POST 请求体必须是 JSON 格式（无需格式化）
+    - 时间戳误差不能超过 5 分钟
+    - 签名结果大小写敏感
+
+servers:
+  - url: https://api.example.com
+    description: 生产环境网关地址（联系客服获取实际地址）
+
+components:
+  securitySchemes:
+    merchantAuth:
+      type: apiKey
+      in: header
+      name: X-Merchant-ID
+      description: 商户ID
+    timestampAuth:
+      type: apiKey
+      in: header
+      name: X-Timestamp
+      description: 当前时间戳单位为秒，误差不能超过5分钟
+    signatureAuth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: 签名，采用HMAC-SHA256算法
+  
+  schemas:
+    CommonResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 响应状态码
+          example: 200
+        data:
+          description: 响应数据
+        msg:
+          type: string
+          description: 响应消息
+          example: "success"
+    
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 错误状态码
+          example: 401015
+        data:
+          type: string
+          description: 错误数据
+          example: ""
+        msg:
+          type: string
+          description: 错误消息
+          example: "参数传递无效"
+    
+    OrderStatus:
+      type: integer
+      description: 订单状态码
+      enum:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+      enumDescriptions:
+        1: "待支付"
+        2: "已支付"
+        3: "已完成"
+        4: "已失败"
+        5: "已取消"
+        6: "申诉中"
+        7: "待释放"
+    
+    CallbackType:
+      type: string
+      description: 回调通知类型
+      enum:
+        - ORDER_CALLBACK_PENDING
+        - ORDER_CALLBACK_CANCEL
+        - ORDER_CALLBACK_COMPLETED
+        - ORDER_CALLBACK_PAID
+        - ORDER_CALLBACK_DISPUTE_RESULT
+        - ORDER_CALLBACK_RELEASING
+      enumDescriptions:
+        ORDER_CALLBACK_PENDING: "订单进行中"
+        ORDER_CALLBACK_CANCEL: "订单取消"
+        ORDER_CALLBACK_COMPLETED: "订单完成"
+        ORDER_CALLBACK_PAID: "订单已支付"
+        ORDER_CALLBACK_DISPUTE_RESULT: "订单申诉处理结果"
+        ORDER_CALLBACK_RELEASING: "释放代币"
+
+  responses:
+    SuccessResponse:
+      description: 成功响应
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonResponse'
+    
+    ErrorResponse:
+      description: 错误响应
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    CallbackSuccessResponse:
+      description: 回调成功响应
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "SUCCESS"
+
+security:
+  - merchantAuth: []
+  - timestampAuth: []
+  - signatureAuth: []
+
+paths:
+  /v1/exchange/ad/order/match:
+    post:
+      summary: 发起交易
+      security:
+        - merchantAuth: []
+        - timestampAuth: []
+        - signatureAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbolid:
+                  type: integer
+                  description: 代币符号ID，固定值：102
+                finance_no:
+                  type: string
+                  description: 通道标识
+                finance:
+                  type: object
+                  description: 付款信息
+                  properties:
+                    html_field:
+                      type: object
+                      description: 通道参数
+                      properties:
+                        userName:
+                          type: string
+                          description: 付款人姓名
+                method:
+                  type: string
+                  description: 撮合方式，固定值：api
+                out_orderno:
+                  type: string
+                  description: 商户订单号
+                amount:
+                  type: string
+                  description: 金额(元)
+                attach_params:
+                  type: string
+                  description: 透传值，回调时原样返回
+              required:
+                - symbolid
+                - finance_no
+                - finance
+                - method
+                - out_orderno
+                - amount
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CommonResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderno:
+                            type: string
+                            description: 系统订单号
+                          out_orderno:
+                            type: string
+                            nullable: true
+                            description: 商户订单号
+                          business:
+                            type: integer
+                            description: 业务类型
+                          cancel_reason:
+                            type: string
+                            description: 取消原因
+                          status:
+                            $ref: '#/components/schemas/OrderStatus'
+                          settlement:
+                            type: object
+                            description: 结算信息
+                          expire_at:
+                            type: string
+                            format: date-time
+                            description: 过期时间
+                          release_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 释放时间
+                          completed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 完成时间
+                          paid_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 支付时间
+                          created_at:
+                            type: string
+                            format: date-time
+                            description: 创建时间
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse''
+  /v1/exchange/ad/merchant/sell/up:
+    post:
+      summary: 发起代付
+      security:
+        - merchantAuth: []
+        - timestampAuth: []
+        - signatureAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbolid:
+                  type: integer
+                  description: 代币符号ID，固定值：104
+                finance:
+                  type: object
+                  description: 收款信息
+                  properties:
+                    finance_no:
+                      type: string
+                      description: 通道标识
+                    html_field:
+                      type: object
+                      description: 通道参数
+                      oneOf:
+                        - type: object
+                          description: 支付宝支付字段
+                          properties:
+                            bank_no:
+                              type: string
+                              description: 支付宝账号
+                            bank_name:
+                              type: string
+                              enum: ["支付宝"]
+                              description: 支付方式
+                            receiver:
+                              type: string
+                              description: 收款人姓名
+                          required:
+                            - bank_no
+                            - bank_name
+                            - receiver
+                        - type: object
+                          description: 银行卡支付字段
+                          properties:
+                            bank_no:
+                              type: string
+                              description: 银行卡账号
+                            bank_name:
+                              type: string
+                              enum: ["银行卡"]
+                              description: 支付方式
+                            receiver:
+                              type: string
+                              description: 收款人姓名
+                          required:
+                            - bank_no
+                            - bank_name
+                            - receiver
+                method:
+                  type: string
+                  description: 撮合方式，固定值：api
+                out_orderno:
+                  type: string
+                  description: 商户订单号
+                amount:
+                  type: string
+                  description: 金额(元)
+                attach_params:
+                  type: string
+                  description: 透传值，回调时原样返回
+              required:
+                - symbolid
+                - finance
+                - method
+                - out_orderno
+                - amount
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CommonResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          ad:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                description: 代付单ID
+                          order:
+                            type: object
+                            properties:
+                              orderno:
+                                type: string
+                                description: 系统订单号
+                              status:
+                                $ref: '#/components/schemas/OrderStatus'
+                              out_orderno:
+                                type: string
+                                description: 商户订单号
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/exchange/order/detail:
+    get:
+      summary: 订单查询
+      security:
+        - merchantAuth: []
+        - timestampAuth: []
+        - signatureAuth: []
+      parameters:
+        - name: orderno
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 系统单号，与商户单号二选一
+        - name: out_orderno
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 商户单号，与系统单号二选一
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CommonResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          orderno:
+                            type: string
+                            description: 系统订单号
+                          out_orderno:
+                            type: string
+                            nullable: true
+                            description: 商户订单号
+                          business:
+                            type: integer
+                            description: 业务类型
+                          cancel_reason:
+                            type: string
+                            description: 取消原因
+                          status:
+                            $ref: '#/components/schemas/OrderStatus'
+                          settlement:
+                            type: object
+                            properties:
+                              m_fee:
+                                type: string
+                                description: 手续费
+                              m_rate:
+                                type: string
+                                description: 费率
+                              m_amount_fee:
+                                type: string
+                                description: 金额手续费
+                              m_service_fee:
+                                type: string
+                                description: 服务费
+                          body:
+                            type: object
+                            properties:
+                              pay_url:
+                                type: string
+                                description: 支付链接
+                          expire_at:
+                            type: string
+                            format: date-time
+                            description: 过期时间
+                          release_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 释放时间
+                          completed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 完成时间
+                          paid_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 支付时间
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /merchant/callback:   # 这里用示例路径，商户可自行替换
+    post:
+      summary: 回调通知
+      description: >
+        平台通过 HTTP POST 向商户回调订单状态。商户必须返回大写字符串 "SUCCESS" 确认收到。
+        平台会根据重试机制多次发送，直到收到 "SUCCESS" 或达到重试次数上限。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  $ref: '#/components/schemas/CallbackType'
+                business:
+                  type: string
+                  description: 业务类型，3 交易，4 代付
+                adno:
+                  type: string
+                  description: 代付单号
+                orderno:
+                  type: string
+                  description: 订单号
+                out_orderno:
+                  type: string
+                  description: 商户订单号
+                attach_params:
+                  type: string
+                  description: 透传值，回调时原样返回
+                dispute_result_action:
+                  $ref: '#/components/schemas/DisputeResultAction'
+              required:
+                - type
+                - business
+                - adno
+                - orderno
+                - out_orderno
+                - attach_params
+      responses:
+        '200':
+          $ref: '#/components/responses/CallbackSuccessResponse'
+

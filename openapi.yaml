@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: JJPay API
   version: 1.0.0
-  description: |
+  description: >
     # 约定声明
     
     ## 网关地址
@@ -62,21 +62,21 @@ servers:
 
 components:
   securitySchemes:
-    merchantAuth:
+    merchantAuthentication:
       type: apiKey
       in: header
       name: X-Merchant-ID
-      description: 商户ID
-    timestampAuth:
+      description: 商户ID，在商户后台获取
+    timestampValidation:
       type: apiKey
       in: header
       name: X-Timestamp
       description: 当前时间戳单位为秒，误差不能超过5分钟
-    signatureAuth:
+    signatureVerification:
       type: apiKey
       in: header
       name: X-Signature
-      description: 签名，采用HMAC-SHA256算法
+      description: 签名，采用HMAC-SHA256算法，使用商户密钥对请求进行签名
   
   schemas:
     CommonResponse:
@@ -111,41 +111,38 @@ components:
     
     OrderStatus:
       type: integer
-      description: 订单状态码
+      description: >
+        订单状态码:
+          * `1` - 待支付
+          * `2` - 已支付
+          * `3` - 已完成
+          * `4` - 已失败
+          * `5` - 已取消
+          * `6` - 申诉中
+          * `7` - 待释放
+
+    CallbackType:
+      type: string
+      description: >
+        回调通知类型:
+          * `ORDER_CALLBACK_PENDING` - 订单进行中
+          * `ORDER_CALLBACK_CANCEL` - 订单取消
+          * `ORDER_CALLBACK_COMPLETED` - 订单完成
+          * `ORDER_CALLBACK_PAID` - 订单已支付
+          * `ORDER_CALLBACK_DISPUTE_RESULT` - 订单申诉处理结果
+          * `ORDER_CALLBACK_RELEASING` - 释放代币
+
+    DisputeResultAction:
+      type: integer
       enum:
         - 1
         - 2
         - 3
-        - 4
-        - 5
-        - 6
-        - 7
-      enumDescriptions:
-        1: "待支付"
-        2: "已支付"
-        3: "已完成"
-        4: "已失败"
-        5: "已取消"
-        6: "申诉中"
-        7: "待释放"
-    
-    CallbackType:
-      type: string
-      description: 回调通知类型
-      enum:
-        - ORDER_CALLBACK_PENDING
-        - ORDER_CALLBACK_CANCEL
-        - ORDER_CALLBACK_COMPLETED
-        - ORDER_CALLBACK_PAID
-        - ORDER_CALLBACK_DISPUTE_RESULT
-        - ORDER_CALLBACK_RELEASING
-      enumDescriptions:
-        ORDER_CALLBACK_PENDING: "订单进行中"
-        ORDER_CALLBACK_CANCEL: "订单取消"
-        ORDER_CALLBACK_COMPLETED: "订单完成"
-        ORDER_CALLBACK_PAID: "订单已支付"
-        ORDER_CALLBACK_DISPUTE_RESULT: "订单申诉处理结果"
-        ORDER_CALLBACK_RELEASING: "释放代币"
+      description: >
+        申诉处理结果
+          * `1` - 驳回申诉
+          * `2` - 取消订单
+          * `3` - 完成订单
 
   responses:
     SuccessResponse:
@@ -169,20 +166,26 @@ components:
           schema:
             type: string
             example: "SUCCESS"
+    
+    # 统一的错误响应，包含所有可能的HTTP状态码
+    AllErrorResponses:
+      description: 错误响应
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
+# 全局安全配置 - 所有API端点都需要这三个认证头部
+# 注意：回调接口(/merchant/callback)不需要认证，因为它是平台向商户发送通知
 security:
-  - merchantAuth: []
-  - timestampAuth: []
-  - signatureAuth: []
+  - merchantAuthentication: []
+    timestampValidation: []
+    signatureVerification: []
 
 paths:
   /v1/exchange/ad/order/match:
     post:
       summary: 发起交易
-      security:
-        - merchantAuth: []
-        - timestampAuth: []
-        - signatureAuth: []
       requestBody:
         required: true
         content:
@@ -280,19 +283,17 @@ paths:
                             type: string
                             format: date-time
                             description: 创建时间
+        '400':
+          $ref: '#/components/responses/AllErrorResponses'
         '401':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '403':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '404':
-          $ref: '#/components/responses/ErrorResponse''
+          $ref: '#/components/responses/AllErrorResponses'
   /v1/exchange/ad/merchant/sell/up:
     post:
       summary: 发起代付
-      security:
-        - merchantAuth: []
-        - timestampAuth: []
-        - signatureAuth: []
       requestBody:
         required: true
         content:
@@ -396,19 +397,17 @@ paths:
                               out_orderno:
                                 type: string
                                 description: 商户订单号
+        '400':
+          $ref: '#/components/responses/AllErrorResponses'
         '401':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '403':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '404':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
   /v1/exchange/order/detail:
     get:
       summary: 订单查询
-      security:
-        - merchantAuth: []
-        - timestampAuth: []
-        - signatureAuth: []
       parameters:
         - name: orderno
           in: query
@@ -490,15 +489,19 @@ paths:
                             format: date-time
                             nullable: true
                             description: 支付时间
+        '400':
+          $ref: '#/components/responses/AllErrorResponses'
         '401':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '403':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
         '404':
-          $ref: '#/components/responses/ErrorResponse'
+          $ref: '#/components/responses/AllErrorResponses'
   /merchant/callback:   # 这里用示例路径，商户可自行替换
     post:
       summary: 回调通知
+      # 回调接口不需要认证，因为它是平台向商户发送通知
+      security: []  # 覆盖全局安全配置，设置为无认证
       description: >
         平台通过 HTTP POST 向商户回调订单状态。商户必须返回大写字符串 "SUCCESS" 确认收到。
         平台会根据重试机制多次发送，直到收到 "SUCCESS" 或达到重试次数上限。

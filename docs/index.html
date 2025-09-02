@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Docs</title>
+    <meta charset="utf-8"/>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+</head>
+<body>
+<div id="redoc-container"></div>
+<script>
+    Redoc.init("openapi.yaml", {}, document.getElementById("redoc-container"))
+        .catch(err => {
+            document.body.innerHTML = "<h1 style='color:red'>Redoc init failed</h1><pre>"+err+"</pre>";
+            console.error(err);
+        });
+</script>
+</body>
+</html>

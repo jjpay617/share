@@ -8,7 +8,9 @@
 <body>
 <div id="redoc-container"></div>
 <script>
-    Redoc.init("openapi.yaml", {}, document.getElementById("redoc-container"))
+    Redoc.init("openapi.yaml", {
+        hideDownloadButton: true,
+    }, document.getElementById("redoc-container"))
         .catch(err => {
             document.body.innerHTML = "<h1 style='color:red'>Redoc init failed</h1><pre>"+err+"</pre>";
             console.error(err);
